@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Western Cape District Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .sidebar h2 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            text-align: center;
+        }
+        .sidebar select, .sidebar button {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+        }
+        .sidebar select {
+            width: 100%;
+        }
+        .sidebar button {
+            background-color: #34495e;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .sidebar button:hover {
+            background-color: #1abc9c;
+        }
+        .content {
+            flex: 1;
+            position: relative;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Districts</h2>
+            <select id="psuSelect">
+                <option value="">Select PSU_NO_M</option>
+            </select>
+            <button onclick="searchFeature()">Search</button>
+            <button onclick="selectDistrict('Central Karoo', [-32.9942, 22.3786], centralKarooData)">Central Karoo</button>
+            <button onclick="selectDistrict('Garden Route', [-34.0359, 22.1430], gardenRouteData)">Garden Route</button>
+            <button onclick="selectDistrict('Overberg', [-34.4196, 19.3701], overbergData)">Overberg</button>
+            <button onclick="selectDistrict('Cape Winelands', [-33.9243, 19.1233], capeWinelandsData)">Cape Winelands</button>
+            <button onclick="selectDistrict('West Coast', [-32.6658, 18.7413], westCoastData)">West Coast</button>
+            <button onclick="selectDistrict('City of Cape Town', [-33.9258, 18.4232], cityOfCapeTownData)">City of Cape Town</button>
+        </div>
+        <div class="content">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([-33.9249, 18.4241], 7); // Center on Western Cape
+
+        // Add Satellite Imagery Tile Layer as the default base map (ESRI World Imagery)
+        const satelliteLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© ESRI & OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // GeoJSON layer for Linked_PSU_EAs_Western_Cape
+        let geojsonLayer;
+        const psuOptions = {};
+
+        // Load GeoJSON data and dynamically populate the PSU dropdown
+        fetch('Linked_PSU_EAs_Western_Cape.geojson')
+            .then(response => response.json())
+            .then(data => {
+                geojsonLayer = L.geoJSON(data, {
+                    onEachFeature: function (feature, layer) {
+                        if (feature.properties && feature.properties.PSU_NO_M) {
+                            const psuValue = feature.properties.PSU_NO_M;
+                            psuOptions[psuValue] = layer;
+                            layer.bindPopup(`<b>PSU_NO_M:</b> ${psuValue}`);
+                        }
+                    }
+                }).addTo(map);
+
+                // Populate the dropdown with PSU_NO_M options
+                const select = document.getElementById('psuSelect');
+                for (const psu in psuOptions) {
+                    const option = document.createElement('option');
+                    option.value = psu;
+                    option.textContent = psu;
+                    select.appendChild(option);
+                }
+            });
+
+        // District Data
+        const centralKarooData = `...`; // (Same as before)
+        const gardenRouteData = `...`;  // (Same as before)
+        const overbergData = `...`;     // (Same as before)
+        const capeWinelandsData = `...`; // (Same as before)
+        const westCoastData = `...`;    // (Same as before)
+        const cityOfCapeTownData = `...`; // (Same as before)
+
+        const markers = {};
+
+        function selectDistrict(district, coords, data) {
+            if (markers[district]) {
+                map.removeLayer(markers[district]);
+            }
+            const marker = L.marker(coords).addTo(map)
+                .bindPopup(data)
+                .openPopup();
+
+            markers[district] = marker;
+
+            map.flyTo(coords, 10);
+        }
+
+        // Search functionality
+        function searchFeature() {
+            const selectedPSU = document.getElementById('psuSelect').value;
+            if (selectedPSU && psuOptions[selectedPSU]) {
+                const selectedLayer = psuOptions[selectedPSU];
+                map.flyTo(selectedLayer.getBounds().getCenter(), 12);
+                selectedLayer.openPopup();
+            } else {
+                alert('Please select a valid PSU_NO_M');
+            }
+        }
+
+        // Add pins for Metro1 and Metro2
+        L.marker([-33.91999631374319, 18.421362067744525]).addTo(map)
+            .bindPopup("<b>Metro1</b><br>Additional information for Metro1.");
+        L.marker([-33.90139790786131, 18.63079073184578]).addTo(map)
+            .bindPopup("<b>Metro2</b><br>Additional information for Metro2.");
+    </script>
+</body>
+</html>
